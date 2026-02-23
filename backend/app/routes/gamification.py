@@ -19,10 +19,13 @@ class StudentBadgeResponse(BaseModel):
     earned_at: datetime
     class Config: from_attributes = True
 
-@router.get("/badges", response_model=List[BadgeResponse])
+class GamificationFetchRequest(BaseModel):
+    student_id: int
+
+@router.post("/fetch-badges", response_model=List[BadgeResponse])
 def get_all_badges(db: Session = Depends(get_db)):
     return db.query(Badge).all()
 
-@router.get("/student-badges/{student_id}", response_model=List[StudentBadgeResponse])
-def get_student_badges(student_id: int, db: Session = Depends(get_db)):
-    return db.query(StudentBadge).filter(StudentBadge.student_id == student_id).all()
+@router.post("/fetch-student-badges", response_model=List[StudentBadgeResponse])
+def get_student_badges(request: GamificationFetchRequest, db: Session = Depends(get_db)):
+    return db.query(StudentBadge).filter(StudentBadge.student_id == request.student_id).all()

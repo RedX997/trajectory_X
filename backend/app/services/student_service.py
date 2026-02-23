@@ -64,6 +64,7 @@ def get_full_student_profile(db: Session, student_id: int):
     return {
         "id": student.id,
         "name": student.name,
+        "usn": student.usn,
         "major": student.major,
         "semester": student.semester,
         "gpa": student.gpa,

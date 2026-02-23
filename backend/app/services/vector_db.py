@@ -1,31 +1,54 @@
-import chromadb
-from chromadb.utils import embedding_functions
+import os
 
-# Initialize the Chroma client (persists data to a local folder)
-client = chromadb.PersistentClient(path="./chroma_db")
+# Define the persistence directory
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "chroma_db")
 
-# Use a default embedding function (sentence-transformers)
-# This model converts your text into vectors automatically
-embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+def get_collection():
+    try:
+        import chromadb
+        from chromadb.utils import embedding_functions
+        
+        # Initialize the Chroma client
+        client = chromadb.PersistentClient(path=DB_PATH)
 
-# Create or get a collection (like a table in SQL)
-collection = client.get_or_create_collection(
-    name="student_alumni_data", 
-    embedding_function=embedding_func
-)
+        # Embedding model
+        embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
 
-def add_to_vector_db(id, text, metadata):
-    """Add a document (e.g., student profile or alumni bio) to the vector DB"""
-    collection.add(
-        ids=[str(id)],
-        documents=[text],
-        metadatas=[metadata]
-    )
+        # Collection for Student Vectors
+        collection = client.get_or_create_collection(
+            name="student_vectors", 
+            embedding_function=embedding_func,
+            metadata={"hnsw:space": "cosine"}
+        )
+        return collection
+    except Exception as e:
+        print(f"Vector DB Error: {e}")
+        return None
 
-def query_vector_db(query_text, n_results=5):
-    """Search for the most similar records"""
-    results = collection.query(
-        query_texts=[query_text],
-        n_results=n_results
-    )
-    return results
+def upsert_student_vector(student_id, text, metadata):
+    """
+    Store or update a student's vector in ChromaDB
+    """
+    collection = get_collection()
+    if collection:
+        collection.upsert(
+            ids=[str(student_id)],
+            documents=[text],
+            metadatas=[metadata]
+        )
+    else:
+        print(f"Skipping vector storage for student {student_id} due to initialization error.")
+
+def query_similar_students(query_text, n_results=5):
+    """
+    Search for similar student profiles
+    """
+    collection = get_collection()
+    if collection:
+        return collection.query(
+            query_texts=[query_text],
+            n_results=n_results
+        )
+    return None
